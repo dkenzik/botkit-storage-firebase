@@ -1,30 +1,24 @@
-var firebase = require('firebase');
+var firebase = require('firebase'); // From npm with dk mods
 
 /**
  * The Botkit firebase driver
  *
- * @param {Object} config This must contain either a `firebase_uri` property (deprecated) or a `databaseURL` property
+ * @param {Object} config This must contain a `firebase_uri` property
  * @returns {{teams: {get, save, all}, channels: {get, save, all}, users: {get, save, all}}}
  */
 module.exports = function(config) {
 
-    if (!config) {
-        throw new Error('configuration is required.');
-    }
+    // if (!config || !config.firebase_uri) {
+    //     throw new Error('firebase_uri is required.');
+    // }
 
-    // Backwards compatibility shim
-    var configuration;
-    if (config.firebase_uri) {
-        configuration.databaseURL = config.firebase_uri;
-    } else if (!config.databaseURL) {
-        throw new Error('databaseURL is required.');
-    }   else {
-        configuration = config;
+    // var rootRef = new Firebase(config.firebase_uri),
+    var rootRef;
+    if(config.rootRef) {
+        rootRef = config.rootRef;
+    } else {
+        rootRef = firebase.initializeApp(config).database().ref();
     }
-
-    var app = firebase.initializeApp(config),
-        database = app.database(),
-        rootRef = database.ref(),
         teamsRef = rootRef.child('teams'),
         usersRef = rootRef.child('users'),
         channelsRef = rootRef.child('channels');
@@ -56,10 +50,15 @@ module.exports = function(config) {
  */
 function get(firebaseRef) {
     return function(id, cb) {
+        // firebaseRef.child(id).once('value', success, cb);
+
+        // function success(records) {
+        //     cb(null, records.val());
+        // }
         firebaseRef.child(id).once('value').then(function(snapshot) {
-            cb(null,snapshot.val());
-        },
-		cb);
+          cb(snapshot.val());
+        });
+
     };
 }
 
@@ -73,6 +72,7 @@ function save(firebaseRef) {
     return function(data, cb) {
         var firebase_update = {};
         firebase_update[data.id] = data;
+        // firebaseRef.update(firebase_update, cb);
         firebaseRef.update(firebase_update).then(cb);
     };
 }
@@ -85,6 +85,9 @@ function save(firebaseRef) {
  */
 function all(firebaseRef) {
     return function(cb) {
+        // firebaseRef.once('value', success, cb);
+
+        // function success(records) {
         firebaseRef.once('value').then(function success(records) {
             var results = records.val();
 
@@ -97,6 +100,6 @@ function all(firebaseRef) {
             });
 
             cb(null, list);
-        }, cb);
+        });
     };
 }
